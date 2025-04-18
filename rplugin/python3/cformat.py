@@ -89,26 +89,29 @@ class CFormatNvim:
         except KeyboardInterrupt:
             return
 
-        cursor_set = False
-
-        self.nvim.api.buf_clear_namespace(
-            self.nvim.current.buffer, self.namespace, 0, -1
+        self.nvim.exec_lua(
+            "vim.diagnostic.reset(...)",
+            self.namespace,
+            self.nvim.current.buffer.number,
+            0,
+            -1,
         )
 
+        diagnostics = []
         for err in file.errors:
             msg = f"{err.name}: {err.text}"
             for highlight in err.highlights:
-                (line, col) = (max(highlight.lineno - 1, 0), max(highlight.column - 1, 0))
-                self.nvim.api.buf_set_extmark(
-                    self.nvim.current.buffer,
-                    self.namespace,
-                    line,
-                    col,
-                    {"virt_text": [[msg, "ErrorMsg"]]},
+                (line, col) = (
+                    max(highlight.lineno - 1, 0),
+                    0,  # max(highlight.column - 1, 0),
                 )
-                if not cursor_set:
-                    cursor_set = True
-                    self.nvim.current.window.cursor = (line + 1, col)
+                diagnostics.append(
+                    {"lnum": line, "col": col, "message": msg, "severity": 1}
+                )
 
-        if not len(file.errors):
-            self.nvim.out_write("OK!\n")
+        self.nvim.exec_lua(
+            "vim.diagnostic.set(...)",
+            self.namespace,
+            self.nvim.current.buffer.number,
+            diagnostics,
+        )
