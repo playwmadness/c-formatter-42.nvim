@@ -50,7 +50,7 @@ class CFormatNvim:
         range="%",
     )
     def format(self, range):
-        if self.nvim.current.buffer.options.get("filetype") != "c":
+        if self.nvim.current.buffer.options.get("filetype") not in ["c", "cpp"]:
             self.nvim.err_write("Buffer filetype is not C\n")
             return
 
@@ -71,7 +71,7 @@ class CFormatNvim:
         sync=True,
     )
     def norminette(self, range):
-        if self.nvim.current.buffer.options.get("filetype") != "c":
+        if self.nvim.current.buffer.options.get("filetype") not in ["c", "cpp"]:
             self.nvim.err_write("Buffer filetype is not C\n")
             return
 
