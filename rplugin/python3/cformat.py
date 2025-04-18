@@ -21,9 +21,7 @@ try:
     from norminette.registry import Registry
 except ImportError:
     failed_import = True
-    print(
-        "norminette is not installed in your g:python3_host_prog", file=sys.stderr
-    )
+    print("norminette is not installed in your g:python3_host_prog", file=sys.stderr)
 
 if failed_import:
     print(
@@ -37,6 +35,7 @@ if failed_import:
 class CFormatNvim:
     def __init__(self, nvim: pynvim.Nvim):
         self.nvim = nvim
+        self.namespace = nvim.api.create_namespace("c-formatter-42")
 
     @pynvim.command(
         "CFormatNormSync",
@@ -77,7 +76,7 @@ class CFormatNvim:
             return
 
         filepath: str = cast(str, self.nvim.current.buffer.name or "")
-        buf: str = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]])
+        buf: str = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]]) + "\n"
 
         file = File(filepath, buf)
         try:
@@ -90,11 +89,26 @@ class CFormatNvim:
         except KeyboardInterrupt:
             return
 
+        cursor_set = False
+
+        self.nvim.api.buf_clear_namespace(
+            self.nvim.current.buffer, self.namespace, 0, -1
+        )
+
         for err in file.errors:
+            msg = f"{err.name}: {err.text}"
             for highlight in err.highlights:
-                self.nvim.current.window.cursor = (highlight.lineno, highlight.column)
-                self.nvim.err_write(f"{err.name}: {err.text}\n")
-                return
+                (line, col) = (max(highlight.lineno - 1, 0), max(highlight.column - 1, 0))
+                self.nvim.api.buf_set_extmark(
+                    self.nvim.current.buffer,
+                    self.namespace,
+                    line,
+                    col,
+                    {"virt_text": [[msg, "ErrorMsg"]]},
+                )
+                if not cursor_set:
+                    cursor_set = True
+                    self.nvim.current.window.cursor = (line + 1, col)
 
         if not len(file.errors):
             self.nvim.out_write("OK!\n")
