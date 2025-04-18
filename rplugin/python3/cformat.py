@@ -1,13 +1,7 @@
 import sys
-from io import StringIO
 from typing import cast
 
 import pynvim
-from norminette.context import Context
-from norminette.exceptions import CParsingError
-from norminette.file import File
-from norminette.lexer import Lexer
-from norminette.registry import Registry
 
 failed_import = False
 
@@ -17,6 +11,18 @@ except ImportError:
     failed_import = True
     print(
         "c_formatter_42 is not installed in your g:python3_host_prog", file=sys.stderr
+    )
+
+try:
+    from norminette.context import Context
+    from norminette.exceptions import CParsingError
+    from norminette.file import File
+    from norminette.lexer import Lexer
+    from norminette.registry import Registry
+except ImportError:
+    failed_import = True
+    print(
+        "norminette is not installed in your g:python3_host_prog", file=sys.stderr
     )
 
 if failed_import:
@@ -51,10 +57,10 @@ class CFormatNvim:
 
         buf = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]])
 
-        buf = run_all(buf)  # pyright: ignore
+        buf = run_all(buf)
 
         cursor = self.nvim.current.window.cursor
-        self.nvim.current.buffer[range[0] - 1 : range[1]] = buf.split("\n")[:-1]
+        self.nvim.current.buffer[range[0] - 1 : range[1]] = buf.split("\n")
         try:
             self.nvim.current.window.cursor = cursor
         except pynvim.NvimError:
@@ -70,7 +76,7 @@ class CFormatNvim:
             self.nvim.err_write("Buffer filetype is not C\n")
             return
 
-        filepath: str = cast(str, self.nvim.current.buffer.options.get("name"))
+        filepath: str = cast(str, self.nvim.current.buffer.name or "")
         buf: str = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]])
 
         file = File(filepath, buf)
@@ -87,4 +93,8 @@ class CFormatNvim:
         for err in file.errors:
             for highlight in err.highlights:
                 self.nvim.current.window.cursor = (highlight.lineno, highlight.column)
+                self.nvim.err_write(f"{err.name}: {err.text}\n")
                 return
+
+        if not len(file.errors):
+            self.nvim.out_write("OK!\n")
