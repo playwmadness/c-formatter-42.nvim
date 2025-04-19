@@ -54,12 +54,12 @@ class CFormatNvim:
             self.nvim.err_write("Buffer filetype is not C\n")
             return
 
-        buf = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]])
+        buf = "\n".join(self.nvim.current.buffer[range[0] - 1 : range[1]]) + "\n"
 
         buf = run_all(buf)
 
         cursor = self.nvim.current.window.cursor
-        self.nvim.current.buffer[range[0] - 1 : range[1]] = buf.split("\n")
+        self.nvim.current.buffer[range[0] - 1 : range[1]] = buf.split("\n")[:-1]
         try:
             self.nvim.current.window.cursor = cursor
         except pynvim.NvimError:
